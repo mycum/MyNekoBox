@@ -105,12 +105,10 @@ class MainActivity : ThemedActivity(),
 
         refreshNavMenu(DataStore.enableClashAPI)
 
-        // sdk 33 notification
         if (Build.VERSION.SDK_INT >= 33) {
             val checkPermission =
                 ContextCompat.checkSelfPermission(this@MainActivity, POST_NOTIFICATIONS)
             if (checkPermission != PackageManager.PERMISSION_GRANTED) {
-                //动态申请
                 ActivityCompat.requestPermissions(
                     this@MainActivity, arrayOf(POST_NOTIFICATIONS), 0
                 )
@@ -123,6 +121,26 @@ class MainActivity : ThemedActivity(),
                 .setMessage(R.string.preview_version_hint)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
+        }
+
+        val prefs = getSharedPreferences("auto_setup", android.content.Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("setup_done", false)) {
+            prefs.edit().putBoolean("setup_done", true).apply()
+            
+            io.nekohasekai.sagernet.database.DataStore.speedInterval = 10
+            
+            runOnDefaultDispatcher {
+                try {
+                    val group = io.nekohasekai.sagernet.database.ProxyGroup(type = io.nekohasekai.sagernet.GroupType.SUBSCRIPTION)
+                    val sub = io.nekohasekai.sagernet.database.SubscriptionBean()
+                    sub.link = "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS%2BAll_RUS.txt"
+                    group.name = "Public Servers"
+                    group.subscription = sub
+                    finishImportSubscription(group)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -163,7 +181,6 @@ class MainActivity : ThemedActivity(),
             val subscription = SubscriptionBean()
             group.subscription = subscription
 
-            // cleartext format
             subscription.link = url
             group.name = uri.getQueryParameter("name")
         } else {
@@ -251,13 +268,10 @@ class MainActivity : ThemedActivity(),
     override fun missingPlugin(profileName: String, pluginName: String) {
         val pluginEntity = PluginEntry.find(pluginName)
 
-        // unknown exe or neko plugin
         if (pluginEntity == null) {
             snackbar(getString(R.string.plugin_unknown, pluginName)).show()
             return
         }
-
-        // official exe
 
         MaterialAlertDialogBuilder(this).setTitle(R.string.missing_plugin)
             .setMessage(
@@ -310,7 +324,6 @@ class MainActivity : ThemedActivity(),
         }
         return true
     }
-
 
     @SuppressLint("CommitTransaction")
     fun displayFragment(fragment: ToolbarFragment) {
@@ -374,7 +387,6 @@ class MainActivity : ThemedActivity(),
             if (binding.fab.isShown) {
                 anchorView = binding.fab
             }
-            // TODO
         }
     }
 
@@ -401,8 +413,6 @@ class MainActivity : ThemedActivity(),
         if (it) snackbar(R.string.vpn_permission_denied).show()
     }
 
-    // may NOT called when app is in background
-    // ONLY do UI update here, write DB in bg process
     override fun cbSpeedUpdate(stats: SpeedDisplayData) {
         binding.stats.updateSpeed(stats.txRateProxy, stats.rxRateProxy)
     }
