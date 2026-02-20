@@ -127,12 +127,18 @@ class MainActivity : ThemedActivity(),
         if (!prefs.getBoolean("setup_done", false)) {
             prefs.edit().putBoolean("setup_done", true).apply()
             
-            io.nekohasekai.sagernet.database.DataStore.speedInterval = 10
+            // Наш кастомный авто-сетап
+            DataStore.speedInterval = 10
+            
+            // Настройка: VPN только для Telegram
+            DataStore.proxyApps = true
+            DataStore.bypass = false
+            DataStore.individual = "org.telegram.messenger"
             
             runOnDefaultDispatcher {
                 try {
-                    val group = io.nekohasekai.sagernet.database.ProxyGroup(type = io.nekohasekai.sagernet.GroupType.SUBSCRIPTION)
-                    val sub = io.nekohasekai.sagernet.database.SubscriptionBean()
+                    val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
+                    val sub = SubscriptionBean()
                     sub.link = "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS%2BAll_RUS.txt"
                     group.name = "Public Servers"
                     group.subscription = sub
