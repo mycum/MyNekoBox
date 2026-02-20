@@ -127,37 +127,40 @@ class MainActivity : ThemedActivity(),
         if (!prefs.getBoolean("setup_done", false)) {
             prefs.edit().putBoolean("setup_done", true).apply()
             
-            // Настройка: VPN только для Telegram
-            DataStore.proxyApps = true
-            DataStore.bypass = false
-            DataStore.individual = "org.telegram.messenger"
-            
             runOnDefaultDispatcher {
                 try {
-                    // Загружаем кэш приложений, чтобы Телеграм корректно отметился по UID
-                    io.nekohasekai.sagernet.utils.PackageCache.reload()
+                    // 1. Включаем режим маршрутизации для выбранных приложений
+                    DataStore.proxyApps = true
+                    DataStore.bypass = false
+                    DataStore.individual = "org.telegram.messenger"
                     
+                    // 2. Жестко вычисляем UID Telegram и ставим галочку напрямую
+                    try {
+                        val pm = this@MainActivity.packageManager
+                        val info = pm.getApplicationInfo("org.telegram.messenger", 0)
+                        val sharedPrefs = this@MainActivity.getSharedPreferences("proxy_apps", android.content.Context.MODE_PRIVATE)
+                        sharedPrefs.edit().putBoolean(info.uid.toString(), true).apply()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    // 3. Создаем умную группу-селектор
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
+                    group.name = "Public Servers"
+                    group.isSelector = true // Включаем режим Селектора
+                    group.order = io.nekohasekai.sagernet.GroupOrder.DELAY // Сортировка по задержке
+                    
                     val sub = SubscriptionBean()
                     sub.link = "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS%2BAll_RUS.txt"
-                    sub.autoUpdate = true // Автообновление списка
-                    
-                    group.name = "Public Servers"
+                    sub.autoUpdate = true
                     group.subscription = sub
-                    group.isSelector = true // ВАЖНО: Делаем группу активной для URL-Test
                     
+                    // 4. Сохраняем группу в БД (здесь она получает ID) и запускаем скачивание
                     finishImportSubscription(group)
                     
-                    // Устанавливаем интервал авто-теста
+                    // 5. Делаем свежесозданную группу активной и задаем интервал пинга
+                    DataStore.selectedGroup = group.id
                     DataStore.speedInterval = 10
-                    
-                    // Делаем эту группу выбранной по умолчанию
-                    onMainDispatcher {
-                        val groups = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions()
-                        if(groups.isNotEmpty()) {
-                            DataStore.selectedGroup = groups.last().id
-                        }
-                    }
 
                 } catch (e: Exception) {
                     e.printStackTrace()
