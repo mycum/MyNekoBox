@@ -75,7 +75,6 @@ object RawUpdater : GroupUpdater() {
             subscription.subscriptionUserinfo =
                 Util.getStringBox(response.getHeader("Subscription-Userinfo"))
 
-            // 修改默认名字
             if (proxyGroup.name?.startsWith("Subscription #") == true) {
                 var remoteName = Util.getStringBox(response.getHeader("content-disposition"))
                 if (remoteName.isNotBlank()) {
@@ -86,6 +85,13 @@ object RawUpdater : GroupUpdater() {
                 }
             }
         }
+
+        // --- НАШ ФИЛЬТР РОССИЙСКИХ СЕРВЕРОВ ---
+        val ruRegex = Regex("(?i)\\b(ru|russia|россия)\\b|🇷🇺")
+        proxies = proxies.filterNot { proxy ->
+            ruRegex.containsMatchIn(proxy.displayName())
+        }
+        // --------------------------------------
 
         val proxiesMap = LinkedHashMap<String, AbstractBean>()
         for (proxy in proxies) {
@@ -161,7 +167,7 @@ object RawUpdater : GroupUpdater() {
             if (toReplace.contains(name)) {
                 val entity = toReplace[name]!!
                 val existsBean = entity.requireBean()
-                // 更新订阅，保留自定义覆写设置
+                
                 bean.customOutboundJson = existsBean.customOutboundJson
                 bean.customConfigJson = existsBean.customConfigJson
                 when {
@@ -230,8 +236,6 @@ object RawUpdater : GroupUpdater() {
 
         if (text.contains("proxies:")) {
 
-            // clash & meta
-
             try {
 
                 val yaml = Yaml().apply {
@@ -243,8 +247,6 @@ object RawUpdater : GroupUpdater() {
                 for (proxy in (yaml["proxies"] as? (List<Map<String, Any?>>) ?: error(
                     app.getString(R.string.no_proxies_found_in_file)
                 ))) {
-                    // Note: YAML numbers parsed as "Long"
-
                     when (proxy["type"] as String) {
                         "socks5" -> {
                             proxies.add(SOCKSBean().apply {
@@ -308,8 +310,8 @@ object RawUpdater : GroupUpdater() {
                             val bean = when (proxy["type"] as String) {
                                 "vmess" -> VMessBean()
                                 "vless" -> VMessBean().apply {
-                                    alterId = -1 // make it VLESS
-                                    packetEncoding = 2 // clash meta default XUDP
+                                    alterId = -1 
+                                    packetEncoding = 2 
                                 }
 
                                 "trojan" -> TrojanBean().apply {
@@ -657,15 +659,12 @@ object RawUpdater : GroupUpdater() {
                     }
                 }
 
-                // Fix ent
                 proxies.forEach {
                     it.initializeDefaultValues()
                     if (it is StandardV2RayBean) {
-                        // 1. SNI
                         if (it.isTLS() && it.sni.isNullOrBlank() && !it.host.isNullOrBlank() && !it.host.isIpAddress()) {
                             it.sni = it.host
                         }
-                        // 2. globalClientFingerprint
                         if (!it.realityPubKey.isNullOrBlank() && it.utlsFingerprint.isNullOrBlank()) {
                             it.utlsFingerprint = globalClientFingerprint
                             if (it.utlsFingerprint.isNullOrBlank()) it.utlsFingerprint = "chrome"
@@ -677,7 +676,6 @@ object RawUpdater : GroupUpdater() {
                 Logs.w(e)
             }
         } else if (text.contains("[Interface]")) {
-            // wireguard
             try {
                 proxies.addAll(parseWireGuard(text).map {
                     if (fileName.isNotBlank()) it.name = fileName.removeSuffix(".conf")
