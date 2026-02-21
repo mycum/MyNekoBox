@@ -138,10 +138,8 @@ class MainActivity : ThemedActivity(),
                             val info = pm.getApplicationInfo(pkg, 0)
                             sharedPrefs.edit().putBoolean(info.uid.toString(), true).apply()
                         } catch (e: Exception) {
-                            // Игнорируем, если пакета нет
                         }
                     }
-                    
                     DataStore.individual = packagesToProxy.joinToString("\n")
                     DataStore.proxyApps = true
                     DataStore.bypass = false
@@ -156,20 +154,17 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    finishImportSubscription(group)
+                    GroupManager.createGroup(group)
                     
-                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
-                    if (savedGroup != null) {
-                        savedGroup.isSelector = true
-                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
-                        
-                        DataStore.selectedGroup = savedGroup.id
-                        DataStore.selectedProxy = savedGroup.id
-                        DataStore.currentProfile = savedGroup.id
-                        DataStore.speedInterval = 10
-                        
-                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(savedGroup.id, true)
-                    }
+                    val groupId = group.id
+                    DataStore.selectedGroup = groupId
+                    DataStore.profileGroup = groupId
+                    DataStore.selectedProxy = groupId
+                    DataStore.currentProfile = groupId
+                    DataStore.speedInterval = 10
+                    
+                    GroupUpdater.startUpdate(group, true)
+                    ProfileManager.postUpdate(groupId, true)
 
                 } catch (e: Exception) {
                     e.printStackTrace()
