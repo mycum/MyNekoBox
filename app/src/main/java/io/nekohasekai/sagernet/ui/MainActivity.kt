@@ -129,38 +129,47 @@ class MainActivity : ThemedActivity(),
             
             runOnDefaultDispatcher {
                 try {
-                    // 1. Включаем режим маршрутизации для выбранных приложений
-                    DataStore.proxyApps = true
-                    DataStore.bypass = false
-                    DataStore.individual = "org.telegram.messenger"
+                    val packagesToProxy = listOf("org.telegram.messenger", "org.telegram.messenger.web")
+                    val pm = this@MainActivity.packageManager
+                    val sharedPrefs = this@MainActivity.getSharedPreferences("proxy_apps", android.content.Context.MODE_PRIVATE)
                     
-                    // 2. Жестко вычисляем UID Telegram и ставим галочку напрямую
-                    try {
-                        val pm = this@MainActivity.packageManager
-                        val info = pm.getApplicationInfo("org.telegram.messenger", 0)
-                        val sharedPrefs = this@MainActivity.getSharedPreferences("proxy_apps", android.content.Context.MODE_PRIVATE)
-                        sharedPrefs.edit().putBoolean(info.uid.toString(), true).apply()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    for (pkg in packagesToProxy) {
+                        try {
+                            val info = pm.getApplicationInfo(pkg, 0)
+                            sharedPrefs.edit().putBoolean(info.uid.toString(), true).apply()
+                        } catch (e: Exception) {
+                            // Игнорируем, если пакета нет
+                        }
                     }
                     
-                    // 3. Создаем умную группу-селектор
+                    DataStore.individual = packagesToProxy.joinToString("\n")
+                    DataStore.proxyApps = true
+                    DataStore.bypass = false
+                    
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
-                    group.isSelector = true // Включаем режим Селектора
-                    group.order = io.nekohasekai.sagernet.GroupOrder.BY_DELAY // Сортировка по задержке
+                    group.isSelector = true
+                    group.order = io.nekohasekai.sagernet.GroupOrder.BY_DELAY
                     
                     val sub = SubscriptionBean()
                     sub.link = "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS%2BAll_RUS.txt"
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    // 4. Сохраняем группу в БД (здесь она получает ID) и запускаем скачивание
                     finishImportSubscription(group)
                     
-                    // 5. Делаем свежесозданную группу активной и задаем интервал пинга
-                    DataStore.selectedGroup = group.id
-                    DataStore.speedInterval = 10
+                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
+                    if (savedGroup != null) {
+                        savedGroup.isSelector = true
+                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
+                        
+                        DataStore.selectedGroup = savedGroup.id
+                        DataStore.selectedProxy = savedGroup.id
+                        DataStore.currentProfile = savedGroup.id
+                        DataStore.speedInterval = 10
+                        
+                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(savedGroup.id, true)
+                    }
 
                 } catch (e: Exception) {
                     e.printStackTrace()
