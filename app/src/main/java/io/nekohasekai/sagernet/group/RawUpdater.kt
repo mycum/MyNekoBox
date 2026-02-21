@@ -92,6 +92,15 @@ object RawUpdater : GroupUpdater() {
             ruRegex.containsMatchIn(proxy.displayName())
         }
         // --------------------------------------
+        // --- ФИКС ШИФРОВАНИЯ ДЛЯ SING-BOX ---
+        proxies.forEach { proxy ->
+            if (proxy is ShadowsocksBean) {
+                if (proxy.method == "chacha20-poly1305") {
+                    proxy.method = "chacha20-ietf-poly1305"
+                }
+            }
+        }
+        // ------------------------------------
 
         val proxiesMap = LinkedHashMap<String, AbstractBean>()
         for (proxy in proxies) {
