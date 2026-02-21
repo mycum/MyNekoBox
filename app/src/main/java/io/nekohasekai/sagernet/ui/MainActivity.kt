@@ -125,7 +125,7 @@ class MainActivity : ThemedActivity(),
 
         val prefs = getSharedPreferences("auto_setup", android.content.Context.MODE_PRIVATE)
         if (!prefs.getBoolean("setup_done", false)) {
-            prefs.edit().putBoolean("setup_done", true).apply()
+            prefs.edit().putBoolean("setup_done", true).commit()
             
             runOnDefaultDispatcher {
                 try {
@@ -136,7 +136,7 @@ class MainActivity : ThemedActivity(),
                     for (pkg in packagesToProxy) {
                         try {
                             val info = pm.getApplicationInfo(pkg, 0)
-                            sharedPrefs.edit().putBoolean(info.uid.toString(), true).apply()
+                            sharedPrefs.edit().putBoolean(info.uid.toString(), true).commit()
                         } catch (e: Exception) {
                         }
                     }
@@ -144,6 +144,7 @@ class MainActivity : ThemedActivity(),
                     DataStore.individual = packagesToProxy.joinToString("\n")
                     DataStore.proxyApps = true
                     DataStore.bypass = false
+                    DataStore.speedInterval = 10
                     
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
@@ -155,12 +156,13 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    val groupId = GroupManager.createGroup(group)
+                    finishImportSubscription(group)
                     
-                    DataStore.speedInterval = 10
-                    DataStore.selectedGroup = groupId
+                    DataStore.selectedGroup = group.id
+                    DataStore.currentProfile = group.id
+                    DataStore.selectedProxy = group.id
                     
-                    GroupUpdater.startUpdate(group, true)
+                    ProfileManager.postUpdate(group.id, true)
                     
                 } catch (e: Exception) {
                     e.printStackTrace()
