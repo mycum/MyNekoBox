@@ -144,7 +144,6 @@ class MainActivity : ThemedActivity(),
                     DataStore.individual = packagesToProxy.joinToString("\n")
                     DataStore.proxyApps = true
                     DataStore.bypass = false
-                    DataStore.speedInterval = 10
                     
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
@@ -156,7 +155,12 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    finishImportSubscription(group)
+                    val groupId = GroupManager.createGroup(group)
+                    
+                    DataStore.speedInterval = 10
+                    DataStore.selectedGroup = groupId
+                    
+                    GroupUpdater.startUpdate(group, true)
                     
                 } catch (e: Exception) {
                     e.printStackTrace()
