@@ -140,14 +140,12 @@ class MainActivity : ThemedActivity(),
                         } catch (e: Exception) {
                         }
                     }
+                    
                     DataStore.individual = packagesToProxy.joinToString("\n")
                     DataStore.proxyApps = true
                     DataStore.bypass = false
+                    DataStore.speedInterval = 10
                     
-                    val basicGroup = ProxyGroup(type = GroupType.BASIC)
-                    basicGroup.name = "Manual Profiles"
-                    GroupManager.createGroup(basicGroup)
-
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
                     group.isSelector = true
@@ -160,19 +158,6 @@ class MainActivity : ThemedActivity(),
                     
                     finishImportSubscription(group)
                     
-                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
-                    if (savedGroup != null) {
-                        savedGroup.isSelector = true
-                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
-                        
-                        DataStore.selectedGroup = savedGroup.id
-                        DataStore.selectedProxy = savedGroup.id
-                        DataStore.currentProfile = savedGroup.id
-                        DataStore.speedInterval = 10
-                        
-                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(savedGroup.id, true)
-                    }
-
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
