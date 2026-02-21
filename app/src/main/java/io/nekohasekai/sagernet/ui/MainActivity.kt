@@ -144,6 +144,10 @@ class MainActivity : ThemedActivity(),
                     DataStore.proxyApps = true
                     DataStore.bypass = false
                     
+                    val basicGroup = ProxyGroup(type = GroupType.BASIC)
+                    basicGroup.name = "Manual Profiles"
+                    GroupManager.createGroup(basicGroup)
+
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
                     group.isSelector = true
@@ -154,17 +158,20 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    GroupManager.createGroup(group)
+                    finishImportSubscription(group)
                     
-                    val groupId = group.id
-                    DataStore.selectedGroup = groupId
-                    DataStore.profileGroup = groupId
-                    DataStore.selectedProxy = groupId
-                    DataStore.currentProfile = groupId
-                    DataStore.speedInterval = 10
-                    
-                    GroupUpdater.startUpdate(group, true)
-                    ProfileManager.postUpdate(groupId, true)
+                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
+                    if (savedGroup != null) {
+                        savedGroup.isSelector = true
+                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
+                        
+                        DataStore.selectedGroup = savedGroup.id
+                        DataStore.selectedProxy = savedGroup.id
+                        DataStore.currentProfile = savedGroup.id
+                        DataStore.speedInterval = 10
+                        
+                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(savedGroup.id, true)
+                    }
 
                 } catch (e: Exception) {
                     e.printStackTrace()
