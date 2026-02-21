@@ -148,7 +148,7 @@ class MainActivity : ThemedActivity(),
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
                     group.isSelector = true // Включаем режим Селектора
-                    group.order = io.nekohasekai.sagernet.GroupOrder.DELAY // Сортировка по задержке
+                    group.order = io.nekohasekai.sagernet.GroupOrder.BY_DELAY // Сортировка по задержке
                     
                     val sub = SubscriptionBean()
                     sub.link = "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS%2BAll_RUS.txt"
