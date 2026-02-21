@@ -144,7 +144,6 @@ class MainActivity : ThemedActivity(),
                     DataStore.individual = packagesToProxy.joinToString("\n")
                     DataStore.proxyApps = true
                     DataStore.bypass = false
-                    DataStore.speedInterval = 10
                     
                     val group = ProxyGroup(type = GroupType.SUBSCRIPTION)
                     group.name = "Public Servers"
@@ -156,13 +155,24 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    finishImportSubscription(group)
+                    GroupManager.createGroup(group)
                     
-                    DataStore.selectedGroup = group.id
-                    DataStore.currentProfile = group.id
-                    DataStore.selectedProxy = group.id
-                    
-                    ProfileManager.postUpdate(group.id, true)
+                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
+                    if (savedGroup != null) {
+                        savedGroup.isSelector = true
+                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
+                        
+                        val realId = savedGroup.id
+                        
+                        DataStore.profileGroup = realId
+                        DataStore.selectedGroup = realId
+                        DataStore.currentProfile = realId
+                        DataStore.selectedProxy = realId
+                        DataStore.speedInterval = 10
+                        
+                        GroupUpdater.startUpdate(savedGroup, true)
+                        ProfileManager.postUpdate(realId, true)
+                    }
                     
                 } catch (e: Exception) {
                     e.printStackTrace()
