@@ -155,23 +155,23 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    GroupManager.createGroup(group)
+                    val groupId = GroupManager.createGroup(group)
                     
-                    val savedGroup = io.nekohasekai.sagernet.database.SagerDatabase.groupDao.subscriptions().lastOrNull()
-                    if (savedGroup != null) {
-                        savedGroup.isSelector = true
-                        io.nekohasekai.sagernet.database.SagerDatabase.groupDao.updateGroup(savedGroup)
-                        
-                        val realId = savedGroup.id
-                        
-                        DataStore.profileGroup = realId
-                        DataStore.selectedGroup = realId
-                        DataStore.currentProfile = realId
-                        DataStore.selectedProxy = realId
-                        DataStore.speedInterval = 10
-                        
-                        GroupUpdater.startUpdate(savedGroup, true)
-                        ProfileManager.postUpdate(realId, true)
+                    DataStore.selectedGroup = groupId
+                    DataStore.currentProfile = groupId
+                    DataStore.selectedProxy = groupId
+                    DataStore.speedInterval = 10
+                    
+                    GroupUpdater.startUpdate(group, true)
+                    
+                    var retries = 0
+                    while (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(groupId) == 0L && retries < 15) {
+                        kotlinx.coroutines.delay(1000)
+                        retries++
+                    }
+                    
+                    if (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(groupId) > 0L) {
+                        ProfileManager.postUpdate(groupId, true)
                     }
                     
                 } catch (e: Exception) {
