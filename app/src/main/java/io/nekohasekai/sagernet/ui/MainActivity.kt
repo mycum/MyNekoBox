@@ -171,19 +171,42 @@ class MainActivity : ThemedActivity(),
                         retries++
                     }
                     
-                    if (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(realId) > 0L) {
-                        ProfileManager.postUpdate(realId, true)
+                    val proxiesList = io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.getByGroup(realId)
+                    if (proxiesList.isNotEmpty()) {
+                        val urlTest = io.nekohasekai.sagernet.bg.proto.UrlTest()
+                        val profilesQueue = java.util.concurrent.ConcurrentLinkedQueue(proxiesList)
+                        val testJobs = mutableListOf<kotlinx.coroutines.Job>()
                         
-                        var connectRetries = 0
-                        while (!DataStore.serviceState.connected && connectRetries < 10) {
-                            kotlinx.coroutines.delay(1000)
-                            connectRetries++
+                        repeat(DataStore.connectionTestConcurrent) {
+                            testJobs.add(launch(kotlinx.coroutines.Dispatchers.IO) {
+                                while (kotlinx.coroutines.isActive) {
+                                    val profile = profilesQueue.poll() ?: break
+                                    try {
+                                        profile.ping = urlTest.doTest(profile)
+                                        profile.status = 1
+                                    } catch (e: Exception) {
+                                        profile.status = 3
+                                    }
+                                    io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.updateProxy(profile)
+                                }
+                            })
                         }
                         
-                        if (DataStore.serviceState.connected && connection.service != null) {
-                            try {
-                                connection.service!!.urlTest()
-                            } catch (e: Exception) {
+                        testJobs.forEach { it.join() }
+                        
+                        val testedProxies = io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.getByGroup(realId)
+                        val fastest = testedProxies.filter { it.status == 1 }.minByOrNull { it.ping }
+                        
+                        if (fastest != null) {
+                            DataStore.selectedProxy = fastest.id
+                            DataStore.currentProfile = fastest.id
+                        }
+                        
+                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(DataStore.selectedProxy, true)
+                        
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            if (!DataStore.serviceState.canStop) {
+                                connect.launch(null)
                             }
                         }
                     }
