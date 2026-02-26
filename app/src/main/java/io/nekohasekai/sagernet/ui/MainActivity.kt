@@ -173,6 +173,19 @@ class MainActivity : ThemedActivity(),
                     
                     if (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(realId) > 0L) {
                         ProfileManager.postUpdate(realId, true)
+                        
+                        var connectRetries = 0
+                        while (!DataStore.serviceState.connected && connectRetries < 10) {
+                            kotlinx.coroutines.delay(1000)
+                            connectRetries++
+                        }
+                        
+                        if (DataStore.serviceState.connected && connection.service != null) {
+                            try {
+                                connection.service!!.urlTest()
+                            } catch (e: Exception) {
+                            }
+                        }
                     }
                     
                 } catch (e: Exception) {
