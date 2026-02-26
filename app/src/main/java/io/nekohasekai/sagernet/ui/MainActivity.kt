@@ -155,23 +155,24 @@ class MainActivity : ThemedActivity(),
                     sub.autoUpdate = true
                     group.subscription = sub
                     
-                    val groupId = GroupManager.createGroup(group)
+                    val createdGroup = GroupManager.createGroup(group)
+                    val realId = createdGroup.id
                     
-                    DataStore.selectedGroup = groupId
-                    DataStore.currentProfile = groupId
-                    DataStore.selectedProxy = groupId
+                    DataStore.selectedGroup = realId
+                    DataStore.currentProfile = realId
+                    DataStore.selectedProxy = realId
                     DataStore.speedInterval = 10
                     
                     GroupUpdater.startUpdate(group, true)
                     
                     var retries = 0
-                    while (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(groupId) == 0L && retries < 15) {
+                    while (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(realId) == 0L && retries < 15) {
                         kotlinx.coroutines.delay(1000)
                         retries++
                     }
                     
-                    if (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(groupId) > 0L) {
-                        ProfileManager.postUpdate(groupId, true)
+                    if (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(realId) > 0L) {
+                        ProfileManager.postUpdate(realId, true)
                     }
                     
                 } catch (e: Exception) {
