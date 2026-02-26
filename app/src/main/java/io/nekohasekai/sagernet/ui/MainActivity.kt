@@ -49,6 +49,12 @@ import io.nekohasekai.sagernet.ktx.parseProxies
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import moe.matsuri.nb4a.utils.Util
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ThemedActivity(),
     SagerConnection.Callback,
@@ -167,7 +173,7 @@ class MainActivity : ThemedActivity(),
                     
                     var retries = 0
                     while (io.nekohasekai.sagernet.database.SagerDatabase.proxyDao.countByGroup(realId) == 0L && retries < 15) {
-                        kotlinx.coroutines.delay(1000)
+                        delay(1000)
                         retries++
                     }
                     
@@ -175,11 +181,11 @@ class MainActivity : ThemedActivity(),
                     if (proxiesList.isNotEmpty()) {
                         val urlTest = io.nekohasekai.sagernet.bg.proto.UrlTest()
                         val profilesQueue = java.util.concurrent.ConcurrentLinkedQueue(proxiesList)
-                        val testJobs = mutableListOf<kotlinx.coroutines.Job>()
+                        val testJobs = mutableListOf<Job>()
                         
                         repeat(DataStore.connectionTestConcurrent) {
-                            testJobs.add(launch(kotlinx.coroutines.Dispatchers.IO) {
-                                while (kotlinx.coroutines.isActive) {
+                            testJobs.add(launch(Dispatchers.IO) {
+                                while (isActive) {
                                     val profile = profilesQueue.poll() ?: break
                                     try {
                                         profile.ping = urlTest.doTest(profile)
@@ -202,9 +208,9 @@ class MainActivity : ThemedActivity(),
                             DataStore.currentProfile = fastest.id
                         }
                         
-                        io.nekohasekai.sagernet.database.ProfileManager.postUpdate(DataStore.selectedProxy, true)
+                        ProfileManager.postUpdate(DataStore.selectedProxy, true)
                         
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        withContext(Dispatchers.Main) {
                             if (!DataStore.serviceState.canStop) {
                                 connect.launch(null)
                             }
